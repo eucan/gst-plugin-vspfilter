@@ -57,6 +57,7 @@ G_DEFINE_TYPE (GstVspFilter, gst_vsp_filter, GST_TYPE_VIDEO_FILTER);
 
 #define DEFAULT_VFLIP FALSE
 #define DEFAULT_HFLIP FALSE
+#define DEFAULT_FULL_COLOR_RANGE FALSE
 
 enum
 {
@@ -67,6 +68,7 @@ enum
   PROP_OUTPUT_IO_MODE,
   PROP_VFLIP,
   PROP_HFLIP,
+  PROP_FULL_COLOR_RANGE
 };
 
 #define CSP_VIDEO_CAPS \
@@ -721,6 +723,7 @@ set_vsp_entities (GstVspFilter * space, GstVideoFormat in_fmt, gint in_width,
   gint ret;
   gchar tmp[256];
   guint n_bufs;
+  enum v4l2_quantization quant;
 
   vsp_info = space->vsp_info;
 
@@ -748,10 +751,15 @@ set_vsp_entities (GstVspFilter * space, GstVideoFormat in_fmt, gint in_width,
 
   n_bufs = N_BUFFERS;
 
+  if (space->full_color_range)
+    quant = V4L2_QUANTIZATION_FULL_RANGE;
+  else
+    quant = V4L2_QUANTIZATION_DEFAULT;
+
   if (need_in_setfmt) {
     if (!set_format (vsp_info->v4lout_fd, in_width, in_height,
-            vsp_info->format[OUT],
-            in_stride, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE, io[OUT])) {
+            vsp_info->format[OUT], in_stride,
+            V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE, io[OUT], quant)) {
       GST_ERROR_OBJECT (space, "set_format for %s failed (%dx%d)",
           vsp_info->dev_name[OUT], in_width, in_height);
       return FALSE;
@@ -767,8 +775,8 @@ set_vsp_entities (GstVspFilter * space, GstVideoFormat in_fmt, gint in_width,
 
   if (need_out_setfmt) {
     if (!set_format (vsp_info->v4lcap_fd, out_width, out_height,
-            vsp_info->format[CAP],
-            out_stride, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE, io[CAP])) {
+            vsp_info->format[CAP], out_stride,
+            V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE, io[CAP], quant)) {
       GST_ERROR_OBJECT (space, "set_format for %s failed (%dx%d)",
           vsp_info->dev_name[CAP], out_width, out_height);
       return FALSE;
@@ -1738,6 +1746,11 @@ gst_vsp_filter_class_init (GstVspFilterClass * klass)
              "Perform horizontal flip (around Y axis)",
              DEFAULT_HFLIP, G_PARAM_READWRITE));
 
+  g_object_class_install_property (gobject_class, PROP_FULL_COLOR_RANGE,
+         g_param_spec_boolean("full-color-range", "Full color range",
+             "Incoming video buffers are quantized in full color range",
+             DEFAULT_FULL_COLOR_RANGE, G_PARAM_READWRITE));
+
   gst_element_class_add_pad_template (gstelement_class,
       gst_static_pad_template_get (&gst_vsp_filter_src_template));
   gst_element_class_add_pad_template (gstelement_class,
@@ -1828,6 +1841,9 @@ gst_vsp_filter_set_property (GObject * object, guint property_id,
     case PROP_HFLIP:
       space->hflip = g_value_get_boolean(value);
       break;
+    case PROP_FULL_COLOR_RANGE:
+      space->full_color_range = g_value_get_boolean(value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -1862,6 +1878,9 @@ gst_vsp_filter_get_property (GObject * object, guint property_id,
       break;
     case PROP_HFLIP:
       g_value_set_boolean(value, space->hflip);
+      break;
+    case PROP_FULL_COLOR_RANGE:
+      g_value_set_boolean(value, space->full_color_range);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);

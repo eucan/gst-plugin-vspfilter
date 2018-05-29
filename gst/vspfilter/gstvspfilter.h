@@ -133,6 +133,7 @@ struct _GstVspFilter {
   GstVspfilterIOMode prop_out_mode;
   gboolean vflip;
   gboolean hflip;
+  gboolean full_color_range;
 };
 
 struct _GstVspFilterClass
