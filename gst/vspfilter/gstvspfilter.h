@@ -131,6 +131,7 @@ struct _GstVspFilter {
   GstBufferPool *out_pool;
   GstVspfilterIOMode prop_in_mode;
   GstVspfilterIOMode prop_out_mode;
+  gboolean full_color_range;
 };
 
 struct _GstVspFilterClass

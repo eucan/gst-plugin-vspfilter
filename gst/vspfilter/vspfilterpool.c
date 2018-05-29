@@ -150,7 +150,7 @@ vspfilter_buffer_pool_set_config (GstBufferPool * bpool, GstStructure * config)
   memset (self->stride, 0, sizeof (self->stride));
 
   if (!set_format (self->fd, vinfo->width, vinfo->height, pix_fmt,
-          self->stride, self->buftype, V4L2_MEMORY_MMAP)) {
+          self->stride, self->buftype, V4L2_MEMORY_MMAP, V4L2_QUANTIZATION_DEFAULT)) {
     GST_ERROR_OBJECT (self, "set_format for %s failed (%dx%d)",
         buftype_str (self->buftype), vinfo->width, vinfo->height);
     return FALSE;
